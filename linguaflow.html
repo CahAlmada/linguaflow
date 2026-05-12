@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinguaFlow — Aprenda idiomas com contexto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e29;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8e6df;
+    --muted: #7a7d8a;
+    --accent: #c8a96e;
+    --accent2: #7c9fd4;
+    --accent3: #7ecba1;
+    --danger: #e07a75;
+    --unknown: rgba(200,169,110,0.22);
+    --unknown-border: rgba(200,169,110,0.6);
+    --known: rgba(126,203,161,0.15);
+    --known-border: rgba(126,203,161,0.5);
+    --learning: rgba(124,159,212,0.2);
+    --learning-border: rgba(124,159,212,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 0;
+  }
+  .logo {
+    padding: 0 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+  }
+  .logo-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  .logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.6rem 1.25rem;
+    font-size: 13.5px;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(200,169,110,0.07); }
+  .nav-icon { font-size: 16px; }
+
+  .stats-mini {
+    margin-top: auto;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .stat-val { color: var(--text); font-weight: 500; }
+
+  /* MAIN */
+  .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-style: italic; color: var(--muted); }
+  .lang-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--accent2);
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+
+  /* PANELS */
+  .panel { display: none; flex: 1; }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* ===================== READING PANEL ===================== */
+  .reading-layout { display: flex; flex: 1; overflow: hidden; }
+  .reading-main { flex: 1; overflow-y: auto; padding: 2.5rem 3rem; }
+  .text-header { margin-bottom: 2rem; }
+  .text-title { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--text); line-height: 1.2; }
+  .text-meta { margin-top: 0.5rem; font-size: 13px; color: var(--muted); }
+  .text-meta span { margin-right: 1rem; }
+
+  .reading-text {
+    font-size: 18px;
+    line-height: 2;
+    max-width: 660px;
+  }
+  .reading-text p { margin-bottom: 1.5rem; }
+
+  .word {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .word:hover { background: rgba(255,255,255,0.1); }
+  .word.unknown {
+    background: var(--unknown);
+    border-bottom: 2px solid var(--unknown-border);
+  }
+  .word.learning {
+    background: var(--learning);
+    border-bottom: 2px solid var(--learning-border);
+  }
+  .word.known {
+    background: var(--known);
+    border-bottom: 1px solid var(--known-border);
+  }
+
+  /* WORD PANEL */
+  .word-panel {
+    width: 320px;
+    min-width: 320px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 1.5rem;
+    transition: all 0.2s;
+  }
+  .word-panel.hidden { width: 0; min-width: 0; padding: 0; overflow: hidden; }
+  .wp-word { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--text); margin-bottom: 0.25rem; }
+  .wp-phonetic { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+  .wp-translation {
+    font-size: 1.2rem; color: var(--accent); font-weight: 500; margin-bottom: 1.5rem;
+  }
+
+  .wp-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.6rem; }
+  .wp-definition { font-size: 14px; line-height: 1.6; color: var(--text); margin-bottom: 1.25rem; }
+
+  .context-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.6rem;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .context-card .highlight { color: var(--text); font-weight: 500; }
+  .context-source { font-size: 11px; margin-top: 4px; color: var(--accent2); }
+
+  .status-btns { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .status-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--muted);
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .status-btn:hover { border-color: var(--border2); color: var(--text); }
+  .status-btn.active-unknown { background: var(--unknown); border-color: var(--unknown-border); color: var(--accent); }
+  .status-btn.active-learning { background: var(--learning); border-color: var(--learning-border); color: var(--accent2); }
+  .status-btn.active-known { background: var(--known); border-color: var(--known-border); color: var(--accent3); }
+
+  .add-flash-btn {
+    width: 100%;
+    padding: 9px;
+    background: rgba(200,169,110,0.12);
+    border: 1px solid rgba(200,169,110,0.3);
+    color: var(--accent);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 0.5rem;
+  }
+  .add-flash-btn:hover { background: rgba(200,169,110,0.2); }
+
+  /* Legend */
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .legend-dot.unknown { background: var(--unknown-border); }
+  .legend-dot.learning { background: var(--learning-border); }
+  .legend-dot.known { background: var(--known-border); }
+
+  /* ===================== FLASHCARD PANEL ===================== */
+  .flash-panel-inner { flex: 1; padding: 2rem 3rem; display: flex; flex-direction: column; }
+  .flash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  .flash-progress-bar { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; margin: 0 1.5rem; overflow: hidden; }
+  .flash-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s; }
+  .flash-counter { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+  .card-scene { perspective: 1000px; max-width: 560px; width: 100%; margin: 0 auto; flex: 1; display: flex; align-items: center; }
+  .card-3d {
+    width: 100%; height: 320px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+    cursor: pointer;
+  }
+  .card-3d.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; inset: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .card-back { transform: rotateY(180deg); background: var(--bg3); }
+  .card-face .card-word { font-family: 'Playfair Display', serif; font-size: 3rem; color: var(--text); margin-bottom: 0.5rem; }
+  .card-face .card-phonetic { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; }
+  .card-face .card-hint { font-size: 13px; color: var(--muted); margin-top: 1.5rem; }
+  .card-back .card-translation { font-size: 1.8rem; color: var(--accent); font-weight: 500; margin-bottom: 0.75rem; }
+  .card-back .card-def { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.7; max-width: 420px; }
+  .card-back .card-ctx {
+    margin-top: 1rem;
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+    width: 100%;
+  }
+  .card-back .ctx-hl { color: var(--text); font-style: normal; font-weight: 500; }
+
+  .flash-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; max-width: 560px; width: 100%; margin-left: auto; margin-right: auto; }
+  .flash-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .flash-btn:hover { color: var(--text); border-color: var(--border2); }
+  .flash-btn.easy { border-color: rgba(126,203,161,0.4); color: var(--accent3); background: rgba(126,203,161,0.08); }
+  .flash-btn.easy:hover { background: rgba(126,203,161,0.15); }
+  .flash-btn.hard { border-color: rgba(224,122,117,0.4); color: var(--danger); background: rgba(224,122,117,0.08); }
+  .flash-btn.hard:hover { background: rgba(224,122,117,0.15); }
+  .flash-btn.flip-btn { border-color: rgba(200,169,110,0.4); color: var(--accent); background: rgba(200,169,110,0.08); }
+  .flash-btn.flip-btn:hover { background: rgba(200,169,110,0.15); }
+
+  .flash-done {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+    text-align: center;
+  }
+  .flash-done h2 { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--accent); }
+  .flash-done p { color: var(--muted); font-size: 15px; }
+
+  /* ===================== VOCAB PANEL ===================== */
+  .vocab-inner { flex: 1; padding: 2rem 3rem; }
+  .vocab-tabs { display: flex; gap: 0; margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; width: fit-content; }
+  .vocab-tab {
+    padding: 8px 20px; font-size: 13px; cursor: pointer;
+    background: transparent; color: var(--muted);
+    border: none; transition: all 0.15s;
+  }
+  .vocab-tab.active { background: var(--bg3); color: var(--accent); }
+  .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .vocab-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    transition: border-color 0.15s;
+    cursor: pointer;
+  }
+  .vocab-card:hover { border-color: var(--border2); }
+  .vocab-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+  .vocab-word { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--text); }
+  .vocab-status-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .badge-unknown { background: var(--unknown); color: var(--accent); border: 1px solid var(--unknown-border); }
+  .badge-learning { background: var(--learning); color: var(--accent2); border: 1px solid var(--learning-border); }
+  .badge-known { background: var(--known); color: var(--accent3); border: 1px solid var(--known-border); }
+  .vocab-translation { font-size: 14px; color: var(--accent); margin-bottom: 0.35rem; }
+  .vocab-ctx { font-size: 12px; color: var(--muted); line-height: 1.5; font-style: italic; }
+  .vocab-seen { font-size: 11px; color: var(--muted); margin-top: 0.5rem; }
+
+  /* Pill tabs counts */
+  .tab-count {
+    display: inline-block;
+    background: var(--bg3);
+    border-radius: 10px;
+    padding: 0 6px;
+    font-size: 11px;
+    margin-left: 4px;
+    color: var(--muted);
+  }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 4rem; color: var(--muted); }
+  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem; }
+
+  /* Notification */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 100;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* Flashcard mode toggle */
+  .flash-mode-selector { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+  .fms-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .fms-btn.active { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-title">LinguaFlow</div>
+      <div class="logo-sub">Inglês · Intermediário</div>
+    </div>
+    <div class="nav-item active" onclick="showPanel('reading')">
+      <span class="nav-icon">📖</span> Leitura
+    </div>
+    <div class="nav-item" onclick="showPanel('flashcards')">
+      <span class="nav-icon">🃏</span> Flashcards
+    </div>
+    <div class="nav-item" onclick="showPanel('vocab')">
+      <span class="nav-icon">📚</span> Vocabulário
+    </div>
+    <div class="stats-mini">
+      <div class="stat-row"><span>Palavras vistas</span><span class="stat-val" id="stat-seen">0</span></div>
+      <div class="stat-row"><span>Para revisar</span><span class="stat-val" id="stat-review">0</span></div>
+      <div class="stat-row"><span>Sessão atual</span><span class="stat-val" id="stat-streak">1 dia 🔥</span></div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Leitura contextual</div>
+      <div class="lang-badge">🇬🇧 Inglês → 🇧🇷 Português</div>
+    </div>
+
+    <!-- ========== READING PANEL ========== -->
+    <div class="panel active" id="panel-reading">
+      <div class="reading-layout">
+        <div class="reading-main">
+          <div class="text-header">
+            <div class="text-title">The Architecture of Dreams</div>
+            <div class="text-meta">
+              <span>✦ Ficção literária</span>
+              <span>Nível B2</span>
+              <span id="word-count-display">248 palavras</span>
+            </div>
+          </div>
+
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot unknown"></div> Desconhecida</div>
+            <div class="legend-item"><div class="legend-dot learning"></div> Aprendendo</div>
+            <div class="legend-item"><div class="legend-dot known"></div> Conhecida</div>
+          </div>
+
+          <div class="reading-text" id="reading-text">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Word Detail Panel -->
+        <div class="word-panel hidden" id="word-panel">
+          <div class="wp-word" id="wp-word"></div>
+          <div class="wp-phonetic" id="wp-phonetic"></div>
+          <div class="wp-translation" id="wp-translation"></div>
+
+          <div class="status-btns" id="status-btns">
+            <div class="status-btn" onclick="setWordStatus('unknown')" id="btn-unknown">❓ Desconhecida</div>
+            <div class="status-btn" onclick="setWordStatus('learning')" id="btn-learning">📖 Aprendendo</div>
+            <div class="status-btn" onclick="setWordStatus('known')" id="btn-known">✓ Conhecida</div>
+          </div>
+
+          <div class="wp-section-title">Definição</div>
+          <div class="wp-definition" id="wp-definition"></div>
+
+          <div class="wp-section-title">Contextos de uso</div>
+          <div id="wp-contexts"></div>
+
+          <button class="add-flash-btn" onclick="addToFlashcards()">＋ Adicionar ao deck de flashcards</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== FLASHCARDS PANEL ========== -->
+    <div class="panel" id="panel-flashcards">
+      <div class="flash-panel-inner">
+        <div class="flash-header">
+          <span class="flash-counter" id="flash-counter">0 / 0</span>
+          <div class="flash-progress-bar"><div class="flash-progress-fill" id="flash-progress" style="width:0%"></div></div>
+          <span style="font-size:13px;color:var(--muted)" id="flash-score">✦ 0 acertos</span>
+        </div>
+
+        <div class="flash-mode-selector">
+          <button class="fms-btn active" onclick="setFlashMode('all',this)">Todos</button>
+          <button class="fms-btn" onclick="setFlashMode('unknown',this)">Desconhecidas</button>
+          <button class="fms-btn" onclick="setFlashMode('learning',this)">Aprendendo</button>
+        </div>
+
+        <div id="flash-content">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== VOCAB PANEL ========== -->
+    <div class="panel" id="panel-vocab">
+      <div class="vocab-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text)">Meu vocabulário</div>
+          <button onclick="showPanel('flashcards')" style="padding:8px 18px;border-radius:8px;background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.3);color:var(--accent);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Revisar com flashcards →</button>
+        </div>
+        <div class="vocab-tabs">
+          <button class="vocab-tab active" onclick="filterVocab('all',this)">Todas <span class="tab-count" id="tc-all">0</span></button>
+          <button class="vocab-tab" onclick="filterVocab('unknown',this)">Desconhecidas <span class="tab-count" id="tc-unknown">0</span></button>
+          <button class="vocab-tab" onclick="filterVocab('learning',this)">Aprendendo <span class="tab-count" id="tc-learning">0</span></button>
+          <button class="vocab-tab" onclick="filterVocab('known',this)">Conhecidas <span class="tab-count" id="tc-known">0</span></button>
+        </div>
+        <div class="vocab-grid" id="vocab-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WORDS_DATA = {
+  "haunted": { phonetic: "/ˈhɔːntɪd/", translation: "assombrado", definition: "Perseguido por memórias ou fantasmas; que evoca sentimentos de tristeza ou angústia.", contexts: [
+    { text: "The old mansion stood haunted by the memories of its former inhabitants.", source: "Literatura" },
+    { text: "She felt haunted by the decision she had made years ago.", source: "Romance" }
+  ]},
+  "labyrinthine": { phonetic: "/ˌlæbɪˈrɪnθɪn/", translation: "labiríntico", definition: "Semelhante a um labirinto; extremamente complexo e confuso.", contexts: [
+    { text: "The labyrinthine corridors of the old palace confused every visitor.", source: "Ficção" },
+    { text: "His labyrinthine thoughts made it impossible to reach a simple conclusion.", source: "Psicologia" }
+  ]},
+  "ephemeral": { phonetic: "/ɪˈfem.ər.əl/", translation: "efêmero", definition: "Que dura apenas por um curto período; transitório.", contexts: [
+    { text: "The beauty of cherry blossoms is ephemeral, lasting only a few weeks.", source: "Natureza" },
+    { text: "Fame can be ephemeral in the age of social media.", source: "Cultura" }
+  ]},
+  "luminescence": { phonetic: "/ˌluːmɪˈnesns/", translation: "luminescência", definition: "Emissão de luz por uma substância que não resulta do calor; brilho suave.", contexts: [
+    { text: "The deep ocean floor glowed with strange luminescence from unknown creatures.", source: "Ciência" },
+    { text: "A faint luminescence surrounded the forest at dusk.", source: "Poesia" }
+  ]},
+  "tethered": { phonetic: "/ˈteðərd/", translation: "amarrado, preso", definition: "Preso por uma corda ou corrente; conectado a algo que limita o movimento.", contexts: [
+    { text: "The balloon was tethered to the fence to keep it from flying away.", source: "Cotidiano" },
+    { text: "She felt tethered to her past, unable to move forward.", source: "Psicologia" }
+  ]},
+  "unraveled": { phonetic: "/ʌnˈrævəld/", translation: "desvendado, desmanchado", definition: "Desenrolar algo que estava entrelaçado; revelar algo que era misterioso.", contexts: [
+    { text: "The detective slowly unraveled the mystery behind the disappearance.", source: "Policial" },
+    { text: "The sweater unraveled after just a few washes.", source: "Cotidiano" }
+  ]},
+  "wistful": { phonetic: "/ˈwɪst.fəl/", translation: "saudoso, melancólico", definition: "Sentimento de desejo suave e triste por algo do passado.", contexts: [
+    { text: "She gazed with a wistful expression at the old photographs.", source: "Literatura" },
+    { text: "There was something wistful in his voice when he spoke of home.", source: "Romance" }
+  ]},
+  "cascaded": { phonetic: "/kæˈskeɪdɪd/", translation: "cascateou, desceu em cascata", definition: "Fluir em grande quantidade, como uma cachoeira; cair em série.", contexts: [
+    { text: "Her hair cascaded down her shoulders in soft waves.", source: "Descrição" },
+    { text: "The consequences cascaded throughout the entire organization.", source: "Negócios" }
+  ]},
+  "beneath": { phonetic: "/bɪˈniːθ/", translation: "abaixo de, sob", definition: "Em posição mais baixa; debaixo de algo.", contexts: [
+    { text: "The treasure was hidden beneath the ancient oak tree.", source: "Aventura" },
+    { text: "Beneath her calm exterior, she was terrified.", source: "Psicologia" }
+  ]},
+  "intricate": { phonetic: "/ˈɪntrɪkɪt/", translation: "intrincado, complexo", definition: "Muito detalhado e complexo; cheio de pequenas partes interligadas.", contexts: [
+    { text: "The clockmaker created an intricate mechanism with hundreds of tiny parts.", source: "Técnico" },
+    { text: "The intricate patterns on the tapestry told stories of ancient battles.", source: "História" }
+  ]}
+};
+
+const TEXT_SEGMENTS = [
+  { type:'p', tokens: [
+    {w:"She"},{w:" "},{w:"walked"},{w:" "},{w:"through"},{w:" "},{w:"the",k:"haunted",status:"unknown"},{w:" "},{w:"corridors"},{w:" "},{w:"of"},{w:" "},{w:"her"},{w:" "},{w:"mind"},{w:", "},{w:"each"},{w:" "},{w:"turn"},{w:" "},{w:"more"},{w:" "},{w:"labyrinthine",k:"labyrinthine",status:"unknown"},{w:" "},{w:"than"},{w:" "},{w:"the"},{w:" "},{w:"last"},{w:". "},{w:"The"},{w:" "},{w:"architecture"},{w:" "},{w:"of"},{w:" "},{w:"dreams"},{w:" "},{w:"is"},{w:" "},{w:"rarely"},{w:" "},{w:"logical"},{w:"—"},{w:"it"},{w:" "},{w:"bends"},{w:" "},{w:"and"},{w:" "},{w:"breathes"},{w:" "},{w:"like"},{w:" "},{w:"something"},{w:" "},{w:"alive"},{w:", "},{w:"ephemeral",k:"ephemeral",status:"learning"},{w:" "},{w:"yet"},{w:" "},{w:"impossibly"},{w:" "},{w:"vivid"},{w:"."}
+  ]},
+  { type:'p', tokens: [
+    {w:"Far"},{w:" "},{w:"below"},{w:", "},{w:"a"},{w:" "},{w:"faint"},{w:" "},{w:"luminescence",k:"luminescence",status:"unknown"},{w:" "},{w:"pulsed"},{w:" "},{w:"like"},{w:" "},{w:"a"},{w:" "},{w:"heartbeat"},{w:" "},{w:"beneath",k:"beneath",status:"known"},{w:" "},{w:"the"},{w:" "},{w:"glass"},{w:" "},{w:"floor"},{w:". "},{w:"She"},{w:" "},{w:"pressed"},{w:" "},{w:"her"},{w:" "},{w:"palm"},{w:" "},{w:"against"},{w:" "},{w:"it"},{w:","},{w:" "},{w:"feeling"},{w:" "},{w:"tethered",k:"tethered",status:"unknown"},{w:" "},{w:"to"},{w:" "},{w:"something"},{w:" "},{w:"she"},{w:" "},{w:"could"},{w:" "},{w:"not"},{w:" "},{w:"name"},{w:"."}
+  ]},
+  { type:'p', tokens: [
+    {w:"Memories"},{w:" "},{w:"unraveled",k:"unraveled",status:"learning"},{w:" "},{w:"around"},{w:" "},{w:"her"},{w:"—"},{w:"intricate",k:"intricate",status:"unknown"},{w:","},{w:" "},{w:"impossible"},{w:","},{w:" "},{w:"beautiful"},{w:". "},{w:"The"},{w:" "},{w:"wistful",k:"wistful",status:"unknown"},{w:" "},{w:"ache"},{w:" "},{w:"of"},{w:" "},{w:"a"},{w:" "},{w:"forgotten"},{w:" "},{w:"summer"},{w:" "},{w:"cascaded",k:"cascaded",status:"learning"},{w:" "},{w:"through"},{w:" "},{w:"her"},{w:" "},{w:"chest"},{w:","},{w:" "},{w:"and"},{w:" "},{w:"she"},{w:" "},{w:"understood"},{w:","},{w:" "},{w:"finally"},{w:","}
+  ]},
+  { type:'p', tokens: [
+    {w:"that"},{w:" "},{w:"some"},{w:" "},{w:"places"},{w:" "},{w:"only"},{w:" "},{w:"exist"},{w:" "},{w:"inside"},{w:" "},{w:"us"},{w:"."}
+  ]}
+];
+
+let wordStatuses = {};
+let flashcardDeck = [];
+let currentFlashIndex = 0;
+let flashScore = 0;
+let cardFlipped = false;
+let currentWordKey = null;
+let vocabFilter = 'all';
+let flashMode = 'all';
+
+function init() {
+  WORDS_DATA; // all loaded
+  TEXT_SEGMENTS.forEach(seg => {
+    seg.tokens.forEach(t => {
+      if(t.k && !wordStatuses[t.k]) wordStatuses[t.k] = t.status;
+    });
+  });
+  renderText();
+  updateStats();
+  renderVocab();
+  renderFlashcards();
+}
+
+function renderText() {
+  const container = document.getElementById('reading-text');
+  let html = '';
+  TEXT_SEGMENTS.forEach(seg => {
+    html += '<p>';
+    seg.tokens.forEach(t => {
+      if(t.k) {
+        const status = wordStatuses[t.k] || 'none';
+        html += `<span class="word ${status}" data-key="${t.k}" onclick="selectWord('${t.k}')">${t.w}</span>`;
+      } else {
+        html += `<span>${t.w}</span>`;
+      }
+    });
+    html += '</p>';
+  });
+  container.innerHTML = html;
+}
+
+function selectWord(key) {
+  currentWordKey = key;
+  const data = WORDS_DATA[key];
+  if(!data) return;
+  document.getElementById('wp-word').textContent = key;
+  document.getElementById('wp-phonetic').textContent = data.phonetic;
+  document.getElementById('wp-translation').textContent = data.translation;
+  document.getElementById('wp-definition').textContent = data.definition;
+  const ctxContainer = document.getElementById('wp-contexts');
+  ctxContainer.innerHTML = data.contexts.map(c => {
+    const highlighted = c.text.replace(new RegExp(key,'gi'), `<span class="highlight">${key}</span>`);
+    return `<div class="context-card">${highlighted}<div class="context-source">${c.source}</div></div>`;
+  }).join('');
+  updateStatusBtns();
+  const panel = document.getElementById('word-panel');
+  panel.classList.remove('hidden');
+}
+
+function updateStatusBtns() {
+  const status = wordStatuses[currentWordKey] || 'none';
+  ['unknown','learning','known'].forEach(s => {
+    const btn = document.getElementById('btn-'+s);
+    btn.className = 'status-btn' + (status===s ? ' active-'+s : '');
+  });
+}
+
+function setWordStatus(status) {
+  if(!currentWordKey) return;
+  wordStatuses[currentWordKey] = status;
+  updateStatusBtns();
+  renderText();
+  updateStats();
+  renderVocab();
+  showToast(status === 'unknown' ? '❓ Marcada como desconhecida' : status === 'learning' ? '📖 Adicionada para aprender' : '✓ Marcada como conhecida');
+}
+
+function addToFlashcards() {
+  if(!currentWordKey) return;
+  if(!flashcardDeck.find(f => f.key === currentWordKey)) {
+    flashcardDeck.push({ key: currentWordKey, ...WORDS_DATA[currentWordKey], status: wordStatuses[currentWordKey] || 'unknown' });
+    showToast('🃏 Adicionado ao deck de flashcards!');
+    updateStats();
+    renderFlashcards();
+  } else {
+    showToast('Já está no deck!');
+  }
+}
+
+function updateStats() {
+  const all = Object.keys(wordStatuses);
+  document.getElementById('stat-seen').textContent = all.length;
+  const review = flashcardDeck.length;
+  document.getElementById('stat-review').textContent = review;
+  updateVocabCounts();
+}
+
+function updateVocabCounts() {
+  const counts = {all:0, unknown:0, learning:0, known:0};
+  Object.values(wordStatuses).forEach(s => { counts[s]++; counts.all++; });
+  ['all','unknown','learning','known'].forEach(k => {
+    const el = document.getElementById('tc-'+k);
+    if(el) el.textContent = counts[k];
+  });
+}
+
+function renderVocab() {
+  const grid = document.getElementById('vocab-grid');
+  const words = Object.keys(wordStatuses);
+  const filtered = vocabFilter === 'all' ? words : words.filter(w => wordStatuses[w] === vocabFilter);
+  if(filtered.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><h3>Nenhuma palavra aqui</h3><p>Clique nas palavras durante a leitura para marcá-las.</p></div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(key => {
+    const d = WORDS_DATA[key];
+    if(!d) return '';
+    const s = wordStatuses[key];
+    const inFlash = flashcardDeck.find(f => f.key===key) ? ' · no deck' : '';
+    return `<div class="vocab-card" onclick="showPanel('reading');setTimeout(()=>selectWord('${key}'),100)">
+      <div class="vocab-card-top">
+        <div class="vocab-word">${key}</div>
+        <div class="vocab-status-badge badge-${s}">${s==='unknown'?'Desconhecida':s==='learning'?'Aprendendo':'Conhecida'}</div>
+      </div>
+      <div class="vocab-translation">${d.translation}</div>
+      <div class="vocab-ctx">"${d.contexts[0].text.slice(0,80)}…"</div>
+      <div class="vocab-seen">${d.phonetic}${inFlash}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterVocab(filter, btn) {
+  vocabFilter = filter;
+  document.querySelectorAll('.vocab-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderVocab();
+}
+
+function setFlashMode(mode, btn) {
+  flashMode = mode;
+  document.querySelectorAll('.fms-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFlashIndex = 0;
+  flashScore = 0;
+  cardFlipped = false;
+  renderFlashcards();
+}
+
+function getFilteredDeck() {
+  if(flashMode === 'all') return flashcardDeck;
+  return flashcardDeck.filter(f => f.status === flashMode);
+}
+
+function renderFlashcards() {
+  const deck = getFilteredDeck();
+  const content = document.getElementById('flash-content');
+  document.getElementById('flash-counter').textContent = deck.length === 0 ? '0 / 0' : `${Math.min(currentFlashIndex+1,deck.length)} / ${deck.length}`;
+  const pct = deck.length > 0 ? Math.round((currentFlashIndex/deck.length)*100) : 0;
+  document.getElementById('flash-progress').style.width = pct+'%';
+  document.getElementById('flash-score').textContent = '✦ ' + flashScore + ' acertos';
+
+  if(deck.length === 0) {
+    content.innerHTML = `<div class="flash-done"><h2>Deck vazio</h2><p>Adicione palavras durante a leitura clicando em termos desconhecidos.</p><button class="flash-btn flip-btn" onclick="showPanel('reading')" style="max-width:200px;margin-top:1rem;">Ir para leitura</button></div>`;
+    return;
+  }
+
+  if(currentFlashIndex >= deck.length) {
+    content.innerHTML = `<div class="flash-done"><h2>✦ Sessão concluída!</h2><p>Você revisou ${deck.length} palavras com ${flashScore} acertos.</p><button class="flash-btn flip-btn" onclick="restartFlash()" style="max-width:200px;margin-top:1rem;">Recomeçar</button></div>`;
+    return;
+  }
+
+  const card = deck[currentFlashIndex];
+  content.innerHTML = `
+    <div class="card-scene">
+      <div class="card-3d${cardFlipped?' flipped':''}" id="card3d" onclick="flipCard()">
+        <div class="card-face">
+          <div class="card-word">${card.key}</div>
+          <div class="card-phonetic">${card.phonetic}</div>
+          <div class="card-hint">Clique para revelar a tradução</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-translation">${card.translation}</div>
+          <div class="card-def">${card.definition}</div>
+          <div class="card-ctx">"${card.contexts[0].text.replace(new RegExp(card.key,'gi'), `<span class="ctx-hl">${card.key}</span>`)}"</div>
+        </div>
+      </div>
+    </div>
+    <div class="flash-controls">
+      ${cardFlipped ? `
+        <button class="flash-btn hard" onclick="rateCard('hard')">✗ Difícil</button>
+        <button class="flash-btn" onclick="rateCard('ok')">~ Ok</button>
+        <button class="flash-btn easy" onclick="rateCard('easy')">✓ Fácil</button>
+      ` : `
+        <button class="flash-btn flip-btn" onclick="flipCard()">Revelar resposta</button>
+      `}
+    </div>
+  `;
+}
+
+function flipCard() {
+  cardFlipped = !cardFlipped;
+  renderFlashcards();
+}
+
+function rateCard(rating) {
+  if(rating === 'easy') flashScore++;
+  const deck = getFilteredDeck();
+  const card = deck[currentFlashIndex];
+  if(rating === 'easy' && card) {
+    wordStatuses[card.key] = 'known';
+    card.status = 'known';
+  } else if(rating === 'hard' && card) {
+    wordStatuses[card.key] = 'unknown';
+    card.status = 'unknown';
+  }
+  currentFlashIndex++;
+  cardFlipped = false;
+  renderText();
+  renderVocab();
+  renderFlashcards();
+}
+
+function restartFlash() {
+  currentFlashIndex = 0;
+  flashScore = 0;
+  cardFlipped = false;
+  renderFlashcards();
+}
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  const titles = {reading:'Leitura contextual', flashcards:'Revisão com flashcards', vocab:'Meu vocabulário'};
+  document.getElementById('topbar-title').textContent = titles[name];
+  const idx = {reading:0,flashcards:1,vocab:2}[name];
+  document.querySelectorAll('.nav-item')[idx].classList.add('active');
+  if(name==='vocab') renderVocab();
+  if(name==='flashcards') renderFlashcards();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+init();
+</script>
+</body>
+</html>
